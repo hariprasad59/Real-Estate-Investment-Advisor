@@ -5,6 +5,8 @@ scikit-learn
 xgboost
 catboost
 mlflow==2.8.1
+pyarrow==14.0.1
+cmake
 plotly
 matplotlib
 seaborn
