@@ -72,17 +72,22 @@ def load_models():
     try:
         if os.path.exists(REG_MODEL_PATH):
             reg = joblib.load(REG_MODEL_PATH)
-    except Exception:
-        reg = None
+            st.sidebar.success("Regression model loaded")
+        else:
+            st.sidebar.error("Regression file missing")
+    except Exception as e:
+        st.sidebar.error(f"Regression load error: {e}")
 
     try:
         if os.path.exists(CLF_MODEL_PATH):
             clf = joblib.load(CLF_MODEL_PATH)
-    except Exception:
-        clf = None
+            st.sidebar.success("Classifier model loaded")
+        else:
+            st.sidebar.error("Classifier file missing")
+    except Exception as e:
+        st.sidebar.error(f"Classifier load error: {e}")
 
     return reg, clf
-
 
 # small utility used by Predict page to prepare input like training did
 def prepare_sample_from_inputs(inputs: dict, ref_df: pd.DataFrame) -> pd.DataFrame:
@@ -680,5 +685,5 @@ else:
             st.info("Permutation importance requires classifier & Good_Investment label in dataset.")
 
     st.markdown("---")
-    st.caption("Notes: This app uses MLflow-registered sklearn models (if present). It prepares inputs to match training features, computes derived features like Amenity_Count and Price_per_SqFt, and shows predictions (no retrain).")
+
 
