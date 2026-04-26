@@ -16,25 +16,24 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 import numpy as np
-import mlflow, mlflow.sklearn
 import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.inspection import permutation_importance
 import warnings
+import joblib
+
 warnings.filterwarnings("ignore")
 
 # ----------------------
 # CONFIG
 # ----------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, "target_indian_house_price.csv")
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"file:///{os.path.join(BASE_DIR, 'mlruns')}")
-REGRESSION_MODEL_NAME = "Best_Regression"
-CLASSIFIER_MODEL_NAME = "Best_Classifier"
-LOAD_PROD_STAGE = True
 
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+DATA_PATH = os.path.join(BASE_DIR, "target_indian_house_price.csv")
+
+REG_MODEL_PATH = os.path.join(BASE_DIR, "best_regression.pkl")
+CLF_MODEL_PATH = os.path.join(BASE_DIR, "best_classifier.pkl")
 
 # ----------------------
 # PAGE STYLING (simple CSS)
@@ -65,47 +64,25 @@ def load_data(path: str) -> pd.DataFrame:
     df = pd.read_csv(p)
     return df
 
-def try_load_registered_model(name: str, stage="Production"):
-    if LOAD_PROD_STAGE:
-        try:
-            return mlflow.sklearn.load_model(f"models:/{name}/{stage}")
-        except Exception:
-            pass
-    try:
-        return mlflow.sklearn.load_model(f"models:/{name}")
-    except Exception:
-        return None
-
-def find_latest_local_artifact(mlruns_root="mlruns"):
-    root = Path(mlruns_root)
-    if not root.exists():
-        return None
-    candidates = list(root.rglob("artifacts/*"))
-    candidates = [c for c in candidates if c.exists()]
-    if not candidates:
-        return None
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return str(candidates[0])
-
 @st.cache_resource(show_spinner=False)
-def load_models_with_fallback():
-    reg = try_load_registered_model(REGRESSION_MODEL_NAME)
-    clf = try_load_registered_model(CLASSIFIER_MODEL_NAME)
-    if reg is None:
-        local = find_latest_local_artifact(mlruns_root=MLFLOW_TRACKING_URI.replace("file:", "") if MLFLOW_TRACKING_URI.startswith("file:") else "mlruns")
-        if local:
-            try:
-                reg = mlflow.sklearn.load_model(local)
-            except Exception:
-                reg = None
-    if clf is None:
-        local = find_latest_local_artifact(mlruns_root=MLFLOW_TRACKING_URI.replace("file:", "") if MLFLOW_TRACKING_URI.startswith("file:") else "mlruns")
-        if local:
-            try:
-                clf = mlflow.sklearn.load_model(local)
-            except Exception:
-                clf = None
+def load_models():
+    reg = None
+    clf = None
+
+    try:
+        if os.path.exists(REG_MODEL_PATH):
+            reg = joblib.load(REG_MODEL_PATH)
+    except Exception:
+        reg = None
+
+    try:
+        if os.path.exists(CLF_MODEL_PATH):
+            clf = joblib.load(CLF_MODEL_PATH)
+    except Exception:
+        clf = None
+
     return reg, clf
+
 
 # small utility used by Predict page to prepare input like training did
 def prepare_sample_from_inputs(inputs: dict, ref_df: pd.DataFrame) -> pd.DataFrame:
@@ -163,7 +140,7 @@ except Exception as e:
     st.error(f"Could not load data: {e}")
     st.stop()
 
-reg_model, clf_model = load_models_with_fallback()
+reg_model, clf_model = load_models()
 
 # Navigation
 params = st.query_params
