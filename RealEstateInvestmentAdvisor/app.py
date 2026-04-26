@@ -68,10 +68,11 @@ def load_data(path: str) -> pd.DataFrame:
 def load_models():
     reg = None
     clf = None
-
     try:
         if os.path.exists(REG_MODEL_PATH):
-            reg = joblib.load(REG_MODEL_PATH)
+            loaded = joblib.load(REG_MODEL_PATH)
+            # Unwrap MLflow pyfunc if needed
+            reg = loaded._model_impl if hasattr(loaded, '_model_impl') else loaded
             st.sidebar.success("Regression model loaded")
         else:
             st.sidebar.error("Regression file missing")
@@ -80,7 +81,8 @@ def load_models():
 
     try:
         if os.path.exists(CLF_MODEL_PATH):
-            clf = joblib.load(CLF_MODEL_PATH)
+            loaded = joblib.load(CLF_MODEL_PATH)
+            clf = loaded._model_impl if hasattr(loaded, '_model_impl') else loaded
             st.sidebar.success("Classifier model loaded")
         else:
             st.sidebar.error("Classifier file missing")
@@ -673,7 +675,8 @@ else:
                     small = df.sample(min(2000, len(df)), random_state=1).copy()
                     X_perm = small.drop(columns=["Good_Investment","Future_Price_5Y"], errors="ignore")
                     y_perm = small["Good_Investment"]
-                    perm = permutation_importance(clf_model, X_perm, y_perm, n_repeats=6, random_state=1, n_jobs=-1)
+                    sklearn_clf = clf_model._model_impl if hasattr(clf_model, '_model_impl') else clf_model
+                    perm = permutation_importance(sklearn_clf, X_perm, y_perm, n_repeats=6, random_state=1, n_jobs=-1)
                     imp = pd.Series(perm.importances_mean, index=X_perm.columns).sort_values(ascending=False).head(12)
                     fig, ax = plt.subplots(figsize=(8,5))
                     sns.barplot(x=imp.values, y=imp.index, ax=ax)
