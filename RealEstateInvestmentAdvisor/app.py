@@ -667,26 +667,6 @@ else:
             st.metric("Good Investment?", "Yes" if pred==1 else "No", delta=f"Confidence: {proba:.2f}" if proba is not None else "")
         else:
             st.info("Classifier not available; only regression shown.")
-
-        # Small local explanation: permutation importance (sample)
-        if clf_model is not None and "Good_Investment" in df.columns:
-            with st.expander("Local feature importance (permutation sample)"):
-                try:
-                    small = df.sample(min(2000, len(df)), random_state=1).copy()
-                    X_perm = small.drop(columns=["Good_Investment","Future_Price_5Y"], errors="ignore")
-                    y_perm = small["Good_Investment"]
-                    sklearn_clf = clf_model._model_impl if hasattr(clf_model, '_model_impl') else clf_model
-                    perm = permutation_importance(sklearn_clf, X_perm, y_perm, n_repeats=6, random_state=1, n_jobs=-1)
-                    imp = pd.Series(perm.importances_mean, index=X_perm.columns).sort_values(ascending=False).head(12)
-                    fig, ax = plt.subplots(figsize=(8,5))
-                    sns.barplot(x=imp.values, y=imp.index, ax=ax)
-                    ax.set_title("Top features (permutation importance)")
-                    st.pyplot(fig)
-                except Exception as e:
-                    st.write("Could not compute permutation importance:", e)
-        else:
-            st.info("Permutation importance requires classifier & Good_Investment label in dataset.")
-
     st.markdown("---")
 
 
